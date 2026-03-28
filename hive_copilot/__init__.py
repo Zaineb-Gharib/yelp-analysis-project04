@@ -1,0 +1,1 @@
+"""Hive Copilot migration package."""
