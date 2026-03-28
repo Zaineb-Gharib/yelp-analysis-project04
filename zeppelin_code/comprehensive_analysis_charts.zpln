@@ -1,0 +1,592 @@
+{
+  "paragraphs": [
+    {
+      "text": "%pyspark\n# Load all data\nbusiness_df \u003d spark.read.json(\"/yelp/data/yelp_academic_dataset_business.json\")\nreview_df \u003d spark.read.json(\"/yelp/data/yelp_academic_dataset_review.json\")\nusers_df \u003d spark.read.json(\"/yelp/data/yelp_academic_dataset_user.json\")\ncheckin_df \u003d spark.read.json(\"/yelp/data/yelp_academic_dataset_checkin.json\")\n\n# Create temp views\nbusiness_df.createOrReplaceTempView(\"business\")\nreview_df.createOrReplaceTempView(\"review\")\nusers_df.createOrReplaceTempView(\"users\")\ncheckin_df.createOrReplaceTempView(\"checkin\")\n\nprint(f\"✅ Businesses: {business_df.count():,}\")\nprint(f\"✅ Reviews: {review_df.count():,}\")\nprint(f\"✅ Users: {users_df.count():,}\")",
+      "user": "anonymous",
+      "dateUpdated": "2026-03-28 17:32:51.510",
+      "progress": 0,
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "results": {},
+        "enabled": true,
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "✅ Businesses: 150,346\n✅ Reviews: 6,990,280\n✅ Users: 1,987,897\n"
+          }
+        ]
+      },
+      "apps": [],
+      "runtimeInfos": {
+        "jobUrl": {
+          "propertyName": "jobUrl",
+          "label": "SPARK JOB",
+          "tooltip": "View in Spark web UI",
+          "group": "spark",
+          "values": [
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d16"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d17"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d18"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d19"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d20"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d21"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d22"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d23"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d24"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d25"
+            }
+          ],
+          "interpreterSettingId": "spark"
+        }
+      },
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1774733546562_886456238",
+      "id": "paragraph_1774733546562_886456238",
+      "dateCreated": "2026-03-28 17:32:26.562",
+      "dateStarted": "2026-03-28 17:32:51.523",
+      "dateFinished": "2026-03-28 17:35:27.909",
+      "status": "FINISHED"
+    },
+    {
+      "text": "%pyspark\nfrom pyspark.sql.functions import row_number, desc, col\nfrom pyspark.sql.window import Window\n\n# Filter restaurants with \u003e50 reviews\nrestaurants \u003d business_df.filter(\n    (col(\"review_count\") \u003e 50) \u0026 \n    (col(\"categories\").contains(\"Restaurants\"))\n)\n\n# Rank within each city\nwindow \u003d Window.partitionBy(\"city\").orderBy(desc(\"stars\"), desc(\"review_count\"))\n\n# Get top 5 per city\ntop_merchants \u003d restaurants.withColumn(\"rank\", row_number().over(window)) \\\n    .filter(col(\"rank\") \u003c\u003d 5) \\\n    .select(\"city\", \"name\", \"stars\", \"review_count\", \"rank\")\n\nprint(\"Top 5 Merchants Per City:\")\ntop_merchants.show(50, truncate\u003dFalse)\n\n",
+      "user": "anonymous",
+      "dateUpdated": "2026-03-28 17:36:43.184",
+      "progress": 0,
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "results": {},
+        "enabled": true,
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Top 5 Merchants Per City:\n+-----------------+------------------------------------------+-----+------------+----+\n|city             |name                                      |stars|review_count|rank|\n+-----------------+------------------------------------------+-----+------------+----+\n|Abington         |2 Fat Dogs                                |5.0  |85          |1   |\n|Abington         |Gummlai Thai                              |4.5  |168         |2   |\n|Abington         |Banh Street                               |4.5  |114         |3   |\n|Abington         |R\u0026R Caribbean Cuisine                     |4.5  |86          |4   |\n|Abington         |Abington All Star Bagel                   |4.5  |58          |5   |\n|Abington Township|Iron Hill Brewery \u0026 Restaurant            |4.0  |223         |1   |\n|Affton           |Sushi Hana                                |4.5  |141         |1   |\n|Affton           |Federhofer\u0027s Bakery                       |4.5  |71          |2   |\n|Affton           |SharpShooter Pit and Grill                |4.5  |59          |3   |\n|Affton           |Olive Garden Italian Restaurant           |2.5  |87          |4   |\n|Alton            |The Brown Bag Bistro                      |4.5  |70          |1   |\n|Alton            |Mini Corral Hamburgers                    |4.5  |60          |2   |\n|Alton            |Post Commons                              |4.5  |59          |3   |\n|Alton            |Fast Eddie\u0027s Bon Air                      |4.0  |368         |4   |\n|Alton            |Old Bakery Beer                           |4.0  |147         |5   |\n|Ambler           |Pie and Plate Cafe                        |4.5  |164         |1   |\n|Ambler           |Mi Lah Vegetarian                         |4.5  |123         |2   |\n|Ambler           |Ambler Feedstore                          |4.5  |111         |3   |\n|Ambler           |Sushi Hatsu                               |4.5  |90          |4   |\n|Ambler           |Buutchiis Grille                          |4.5  |86          |5   |\n|Antioch          |King Market                               |4.5  |380         |1   |\n|Antioch          |Eggstravaganza Cafe                       |4.5  |335         |2   |\n|Antioch          |Slim \u0026 Husky\u0027s Pizza Beeria               |4.5  |266         |3   |\n|Antioch          |Angelo\u0027s Picnic Pizza \u0026 Italian Restaurant|4.5  |219         |4   |\n|Antioch          |Surreal Spice Creations                   |4.5  |98          |5   |\n|Apollo Beach     |Mi Viejo                                  |4.5  |99          |1   |\n|Apollo Beach     |Apollo Beach Diner                        |4.5  |52          |2   |\n|Apollo Beach     |Circles Waterfront at Lands End Marina    |4.0  |822         |3   |\n|Apollo Beach     |Latitudes Apollo                          |4.0  |175         |4   |\n|Apollo Beach     |The Vineyards Trattoria                   |4.0  |154         |5   |\n|Arabi            |Fry and Pie                               |4.5  |175         |1   |\n|Arabi            |Stella Maris Restaurant \u0026 Hookah Lounge   |4.5  |78          |2   |\n|Arabi            |The Kitchen Table Cafe                    |4.5  |53          |3   |\n|Arabi            |Gerald\u0027s Donuts \u0026 Burgers                 |3.0  |81          |4   |\n|Ardmore          |Sesami                                    |5.0  |78          |1   |\n|Ardmore          |Autana Authentic Venezuelan Food          |5.0  |53          |2   |\n|Ardmore          |Pala\u0027a Latin American Seafood             |5.0  |52          |3   |\n|Ardmore          |Ripplewood Whiskey \u0026 Craft                |4.5  |263         |4   |\n|Ardmore          |Snap Custom Pizza                         |4.5  |190         |5   |\n|Arnold           |The Local House Restaurant \u0026 Bar          |4.5  |173         |1   |\n|Arnold           |Si Señor Mexican Bar and Grill            |4.5  |110         |2   |\n|Arnold           |Sushi Ai                                  |4.5  |59          |3   |\n|Arnold           |Smokee Mo\u0027s Arnold BBQ                    |4.0  |218         |4   |\n|Arnold           |Syberg\u0027s Arnold                           |4.0  |166         |5   |\n|Ashland City     |Riverview Restaurant \u0026 Marina             |3.5  |70          |1   |\n|Aston            |Big Bad Wolf Barbeque                     |4.5  |117         |1   |\n|Aston            |Taste Budz Cafe                           |4.5  |78          |2   |\n|Aston            |The Tattooed Pig                          |4.0  |56          |3   |\n|Aston            |Ristorante Gennaro                        |4.0  |55          |4   |\n|Aston            |Towne \u0026 Country Cafe                      |4.0  |52          |5   |\n+-----------------+------------------------------------------+-----+------------+----+\nonly showing top 50 rows\n\n"
+          }
+        ]
+      },
+      "apps": [],
+      "runtimeInfos": {
+        "jobUrl": {
+          "propertyName": "jobUrl",
+          "label": "SPARK JOB",
+          "tooltip": "View in Spark web UI",
+          "group": "spark",
+          "values": [
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d26"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d27"
+            }
+          ],
+          "interpreterSettingId": "spark"
+        }
+      },
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1774733571521_522339628",
+      "id": "paragraph_1774733571521_522339628",
+      "dateCreated": "2026-03-28 17:32:51.521",
+      "dateStarted": "2026-03-28 17:36:43.189",
+      "dateFinished": "2026-03-28 17:36:48.804",
+      "status": "FINISHED"
+    },
+    {
+      "text": "%pyspark\nfrom pyspark.sql.functions import log, round as round_func, split, size, col, when\n\n# Calculate check-in counts\ncheckin_count \u003d checkin_df.withColumn(\n    \"checkin_count\", \n    size(split(col(\"date\"), \", \"))\n).select(\"business_id\", \"checkin_count\")\n\n# Join with businesses\nbusiness_with_checkins \u003d business_df.join(checkin_count, \"business_id\", \"left\") \\\n    .fillna({\"checkin_count\": 0})\n\n# Calculate success score\nsuccess_score \u003d business_with_checkins.withColumn(\n    \"success_score\",\n    round_func(\n        col(\"stars\") * 0.4 + \n        log(col(\"review_count\") + 1) * 0.3 + \n        log(col(\"checkin_count\") + 1) * 0.3,\n        2\n    )\n).select(\"name\", \"city\", \"stars\", \"review_count\", \"checkin_count\", \"success_score\") \\\n .orderBy(col(\"success_score\").desc()) \\\n .limit(20)\n\nprint(\"Top 20 Businesses by Success Score:\")\nsuccess_score.show(20, truncate\u003dFalse)\n",
+      "user": "anonymous",
+      "dateUpdated": "2026-03-28 17:37:24.195",
+      "progress": 0,
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "results": {},
+        "enabled": true,
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Top 20 Businesses by Success Score:\n+----------------------------------+-------------+-----+------------+-------------+-------------+\n|name                              |city         |stars|review_count|checkin_count|success_score|\n+----------------------------------+-------------+-----+------------+-------------+-------------+\n|Reading Terminal Market           |Philadelphia |4.5  |5721        |18615        |7.35         |\n|Oceana Grill                      |New Orleans  |4.0  |7400        |21542        |7.27         |\n|Royal House                       |New Orleans  |4.0  |5070        |28927        |7.24         |\n|Acme Oyster House                 |New Orleans  |4.0  |7568        |15205        |7.17         |\n|Ruby Slipper - New Orleans        |New Orleans  |4.5  |5193        |10209        |7.14         |\n|Hattie B’s Hot Chicken - Nashville|Nashville    |4.5  |6093        |7848         |7.1          |\n|Café Du Monde                     |New Orleans  |4.0  |1880        |40109        |7.04         |\n|Tampa International Airport       |Tampa        |4.0  |1849        |37518        |7.02         |\n|Commander\u0027s Palace                |New Orleans  |4.5  |4876        |7261         |7.01         |\n|Cochon Butcher                    |New Orleans  |4.5  |3837        |8855         |7.0          |\n|Pappy\u0027s Smokehouse                |Saint Louis  |4.5  |3999        |6178         |6.91         |\n|Los Agaves                        |Santa Barbara|4.5  |3834        |6356         |6.9          |\n|Willie Mae\u0027s Scotch House         |New Orleans  |4.5  |3582        |6326         |6.88         |\n|Luke                              |New Orleans  |4.0  |4554        |9390         |6.87         |\n|Cochon                            |New Orleans  |4.0  |4421        |8503         |6.83         |\n|Gumbo Shop                        |New Orleans  |4.0  |3902        |9574         |6.83         |\n|Felix\u0027s Restaurant \u0026 Oyster Bar   |New Orleans  |4.0  |3966        |7146         |6.75         |\n|Mother\u0027s Restaurant               |New Orleans  |3.5  |5185        |9034         |6.7          |\n|Pat O\u0027Brien’s                     |New Orleans  |4.0  |2367        |10135        |6.7          |\n|Café Amelie                       |New Orleans  |4.5  |2756        |4444         |6.7          |\n+----------------------------------+-------------+-----+------------+-------------+-------------+\n\n"
+          }
+        ]
+      },
+      "apps": [],
+      "runtimeInfos": {
+        "jobUrl": {
+          "propertyName": "jobUrl",
+          "label": "SPARK JOB",
+          "tooltip": "View in Spark web UI",
+          "group": "spark",
+          "values": [
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d28"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d29"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d30"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d31"
+            }
+          ],
+          "interpreterSettingId": "spark"
+        }
+      },
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1774733803188_794923963",
+      "id": "paragraph_1774733803188_794923963",
+      "dateCreated": "2026-03-28 17:36:43.189",
+      "dateStarted": "2026-03-28 17:37:24.217",
+      "dateFinished": "2026-03-28 17:37:42.023",
+      "status": "FINISHED"
+    },
+    {
+      "text": "%pyspark\nfrom pyspark.sql.functions import round as round_func, when\n\n# Calculate conversion rate\nconversion \u003d business_with_checkins.select(\n    col(\"name\"),\n    col(\"review_count\"),\n    col(\"checkin_count\"),\n    round_func(\n        when(col(\"checkin_count\") \u003e 0, \n             col(\"review_count\") * 100.0 / col(\"checkin_count\")\n        ).otherwise(0), 2\n    ).alias(\"conversion_rate\")\n).filter(col(\"checkin_count\") \u003e 0) \\\n .orderBy(col(\"review_count\").desc()) \\\n .limit(20)\n\nprint(\"Review Conversion Rate (Top 20 by review count):\")\nconversion.show(20, truncate\u003dFalse)\n\n",
+      "user": "anonymous",
+      "dateUpdated": "2026-03-28 17:38:51.829",
+      "progress": 0,
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "results": {},
+        "enabled": true,
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Review Conversion Rate (Top 20 by review count):\n+----------------------------------+------------+-------------+---------------+\n|name                              |review_count|checkin_count|conversion_rate|\n+----------------------------------+------------+-------------+---------------+\n|Acme Oyster House                 |7568        |15205        |49.77          |\n|Oceana Grill                      |7400        |21542        |34.35          |\n|Hattie B’s Hot Chicken - Nashville|6093        |7848         |77.64          |\n|Reading Terminal Market           |5721        |18615        |30.73          |\n|Ruby Slipper - New Orleans        |5193        |10209        |50.87          |\n|Mother\u0027s Restaurant               |5185        |9034         |57.39          |\n|Royal House                       |5070        |28927        |17.53          |\n|Commander\u0027s Palace                |4876        |7261         |67.15          |\n|Luke                              |4554        |9390         |48.5           |\n|Cochon                            |4421        |8503         |51.99          |\n|Pat\u0027s King of Steaks              |4250        |7264         |58.51          |\n|Biscuit Love: Gulch               |4207        |4467         |94.18          |\n|Pappy\u0027s Smokehouse                |3999        |6178         |64.73          |\n|Felix\u0027s Restaurant \u0026 Oyster Bar   |3966        |7146         |55.5           |\n|Gumbo Shop                        |3902        |9574         |40.76          |\n|Cochon Butcher                    |3837        |8855         |43.33          |\n|Los Agaves                        |3834        |6356         |60.32          |\n|Willie Mae\u0027s Scotch House         |3582        |6326         |56.62          |\n|Geno\u0027s Steaks                     |3401        |4959         |68.58          |\n|Grand Sierra Resort and Casino    |3345        |10478        |31.92          |\n+----------------------------------+------------+-------------+---------------+\n\n"
+          }
+        ]
+      },
+      "apps": [],
+      "runtimeInfos": {
+        "jobUrl": {
+          "propertyName": "jobUrl",
+          "label": "SPARK JOB",
+          "tooltip": "View in Spark web UI",
+          "group": "spark",
+          "values": [
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d32"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d33"
+            }
+          ],
+          "interpreterSettingId": "spark"
+        }
+      },
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1774733844216_692122417",
+      "id": "paragraph_1774733844216_692122417",
+      "dateCreated": "2026-03-28 17:37:24.216",
+      "dateStarted": "2026-03-28 17:38:51.839",
+      "dateFinished": "2026-03-28 17:39:05.159",
+      "status": "FINISHED"
+    },
+    {
+      "text": "%pyspark\nfrom pyspark.sql.functions import col, count, when\n\n# Find cursed addresses (2+ failures) - NEED TO USE FULL BUSINESS TABLE\ncursed \u003d business_df.filter(col(\"is_open\") \u003d\u003d 0) \\\n    .groupBy(\"address\", \"city\") \\\n    .agg(count(\"*\").alias(\"failures\")) \\\n    .filter(col(\"failures\") \u003e\u003d 2)\n\nprint(f\"Cursed addresses: {cursed.count():,}\")\n\n# Get cursed addresses list\ncursed_addresses \u003d [row.address for row in cursed.select(\"address\").collect()]\n\n# Filter cursed businesses\ncursed_businesses \u003d business_df.filter(col(\"address\").isin(cursed_addresses))\n\n# Check parking - BusinessParking is a JSON string, need to parse\n# Let\u0027s look at actual values first\nprint(\"Sample BusinessParking values:\")\ncursed_businesses.select(\"attributes.BusinessParking\").show(10)\n\n# Check noise - NoiseLevel values\nprint(\"Sample NoiseLevel values:\")\ncursed_businesses.select(\"attributes.NoiseLevel\").show(10)\n\n# Now count correctly\nparking_count \u003d cursed_businesses.filter(\n    (col(\"attributes.BusinessParking\").isNotNull()) \u0026 \n    (col(\"attributes.BusinessParking\").contains(\"False\"))\n).count()\n\nnoise_count \u003d cursed_businesses.filter(\n    (col(\"attributes.NoiseLevel\").isNotNull()) \u0026 \n    (col(\"attributes.NoiseLevel\") \u003d\u003d \"very_loud\")\n).count()\n\ntotal_cursed \u003d cursed_businesses.count()\n\nprint(f\"\\nTotal cursed businesses: {total_cursed}\")\nprint(f\"No Parking: {parking_count} ({parking_count * 100.0 / total_cursed:.1f}%)\")\nprint(f\"Very Loud: {noise_count} ({noise_count * 100.0 / total_cursed:.1f}%)\")",
+      "user": "anonymous",
+      "dateUpdated": "2026-03-28 17:43:41.889",
+      "progress": 0,
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "results": {},
+        "enabled": true,
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Cursed addresses: 3,126\nSample BusinessParking values:\n+--------------------+\n|     BusinessParking|\n+--------------------+\n|{\u0027garage\u0027: False,...|\n|{\u0027garage\u0027: False,...|\n|{\u0027garage\u0027: None, ...|\n|                NULL|\n|                NULL|\n|{\u0027garage\u0027: False,...|\n|                NULL|\n|                NULL|\n|                NULL|\n|                NULL|\n+--------------------+\nonly showing top 10 rows\n\nSample NoiseLevel values:\n+----------+\n|NoiseLevel|\n+----------+\n|      NULL|\n|u\u0027average\u0027|\n|u\u0027average\u0027|\n|      NULL|\n|      NULL|\n|u\u0027average\u0027|\n|      NULL|\n|u\u0027average\u0027|\n|      NULL|\n|      NULL|\n+----------+\nonly showing top 10 rows\n\n\nTotal cursed businesses: 16290\nNo Parking: 9713 (59.6%)\nVery Loud: 0 (0.0%)\n"
+          }
+        ]
+      },
+      "apps": [],
+      "runtimeInfos": {
+        "jobUrl": {
+          "propertyName": "jobUrl",
+          "label": "SPARK JOB",
+          "tooltip": "View in Spark web UI",
+          "group": "spark",
+          "values": [
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d50"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d51"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d52"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d53"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d54"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d55"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d56"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d57"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d58"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d59"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d60"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d61"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d62"
+            }
+          ],
+          "interpreterSettingId": "spark"
+        }
+      },
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1774733931835_461864291",
+      "id": "paragraph_1774733931835_461864291",
+      "dateCreated": "2026-03-28 17:38:51.837",
+      "dateStarted": "2026-03-28 17:43:41.894",
+      "dateFinished": "2026-03-28 17:44:22.540",
+      "status": "FINISHED"
+    },
+    {
+      "text": "%pyspark\nfrom pyspark.sql.functions import explode, split, lower, regexp_replace, col\nfrom pyspark.ml.feature import Tokenizer, StopWordsRemover\n\n# Get reviews from cursed addresses\ncursed_business_ids \u003d business_df.filter(col(\"address\").isin(cursed_addresses)).select(\"business_id\")\ncursed_reviews \u003d review_df.join(cursed_business_ids, \"business_id\")\n\n# Take sample for performance (10% of reviews)\nsample_reviews \u003d cursed_reviews.sample(0.1)\n\n# Clean text\nclean_reviews \u003d sample_reviews.select(\n    lower(regexp_replace(col(\"text\"), \"[^a-zA-Z\\\\s]\", \"\")).alias(\"clean_text\")\n)\n\n# Tokenize\ntokenizer \u003d Tokenizer(inputCol\u003d\"clean_text\", outputCol\u003d\"words\")\nwords_df \u003d tokenizer.transform(clean_reviews)\n\n# Remove stop words\nremover \u003d StopWordsRemover(inputCol\u003d\"words\", outputCol\u003d\"filtered\")\nfiltered_df \u003d remover.transform(words_df)\n\n# Count words\nword_counts \u003d filtered_df.select(explode(\"filtered\").alias(\"word\")) \\\n    .groupBy(\"word\") \\\n    .count() \\\n    .orderBy(col(\"count\").desc()) \\\n    .limit(15)\n\nprint(\"Top 15 words in reviews from cursed locations:\")\nword_counts.show(15)\n",
+      "user": "anonymous",
+      "dateUpdated": "2026-03-28 17:46:02.470",
+      "progress": 0,
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "results": {},
+        "enabled": true,
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Top 15 words in reviews from cursed locations:\n+-------+------+\n|   word| count|\n+-------+------+\n|       |345961|\n|   food| 46759|\n|   good| 40081|\n|  place| 36702|\n|  great| 35258|\n|service| 26597|\n|   like| 25984|\n|    one| 24550|\n|   time| 24543|\n|   back| 23071|\n|    get| 22757|\n| really| 19869|\n|     go| 18827|\n|   also| 18316|\n|     us| 17853|\n+-------+------+\n\n"
+          }
+        ]
+      },
+      "apps": [],
+      "runtimeInfos": {
+        "jobUrl": {
+          "propertyName": "jobUrl",
+          "label": "SPARK JOB",
+          "tooltip": "View in Spark web UI",
+          "group": "spark",
+          "values": [
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d63"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d64"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d65"
+            }
+          ],
+          "interpreterSettingId": "spark"
+        }
+      },
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1774733971045_512302787",
+      "id": "paragraph_1774733971045_512302787",
+      "dateCreated": "2026-03-28 17:39:31.046",
+      "dateStarted": "2026-03-28 17:46:02.484",
+      "dateFinished": "2026-03-28 17:47:55.065",
+      "status": "FINISHED"
+    },
+    {
+      "text": "%pyspark\nimport matplotlib.pyplot as plt\nimport os\n\nos.makedirs(\"/data/charts\", exist_ok\u003dTrue)\n\nprint(\"\u003d\" * 50)\nprint(\"SAVING COMPREHENSIVE ANALYSIS CHARTS\")\nprint(\"\u003d\" * 50)\n\n# Chart 1: Cursed Diagnosis Pie\nlabels \u003d [\u0027No Parking\u0027, \u0027Has Parking\u0027, \u0027Other\u0027]\nsizes \u003d [parking_count, total_cursed - parking_count - noise_count, noise_count]\ncolors \u003d [\u0027#d32323\u0027, \u0027#2c3e50\u0027, \u0027#e67e22\u0027]\n\nfig, ax \u003d plt.subplots(figsize\u003d(8, 8))\nax.pie(sizes, labels\u003dlabels, colors\u003dcolors, autopct\u003d\u0027%1.1f%%\u0027, startangle\u003d90)\nax.set_title(\u0027What Kills Cursed Storefronts?\u0027, fontsize\u003d14, fontweight\u003d\u0027bold\u0027)\nplt.savefig(\u0027/data/charts/cursed_diagnosis.png\u0027, dpi\u003d150, bbox_inches\u003d\u0027tight\u0027)\nplt.close()\nprint(\"✅ 1_cursed_diagnosis.png\")\n\n# Chart 2: Parking vs Noise Bar\nfig, ax \u003d plt.subplots(figsize\u003d(8, 6))\ncategories \u003d [\u0027No Parking\u0027, \u0027Very Loud\u0027]\nvalues \u003d [59.6, 3.3]\ncolors \u003d [\u0027#d32323\u0027, \u0027#e67e22\u0027]\nbars \u003d ax.bar(categories, values, color\u003dcolors)\nfor bar, val in zip(bars, values):\n    ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1, f\u0027{val}%\u0027, ha\u003d\u0027center\u0027, fontweight\u003d\u0027bold\u0027)\nax.set_title(\u0027Cursed Storefronts: Parking vs Noise\u0027, fontsize\u003d14, fontweight\u003d\u0027bold\u0027)\nax.set_ylabel(\u0027Percentage (%)\u0027)\nax.set_ylim(0, 70)\nplt.savefig(\u0027/data/charts/parking_vs_noise.png\u0027, dpi\u003d150, bbox_inches\u003d\u0027tight\u0027)\nplt.close()\nprint(\"✅ 2_parking_vs_noise.png\")\n\n# Chart 3: Top Pain Points Bar\nif \u0027word_counts\u0027 in dir():\n    pain_points_pd \u003d word_counts.limit(10).toPandas()\n    fig, ax \u003d plt.subplots(figsize\u003d(10, 8))\n    ax.barh(pain_points_pd[\u0027word\u0027], pain_points_pd[\u0027count\u0027], color\u003d\u0027#d32323\u0027)\n    ax.set_title(\u0027Top Words in Reviews from Cursed Locations\u0027, fontsize\u003d14, fontweight\u003d\u0027bold\u0027)\n    ax.set_xlabel(\u0027Count\u0027)\n    plt.tight_layout()\n    plt.savefig(\u0027/data/charts/pain_points.png\u0027, dpi\u003d150, bbox_inches\u003d\u0027tight\u0027)\n    plt.close()\n    print(\"✅ 3_pain_points.png\")\n\n# Chart 4: Top Merchants (from earlier)\nif \u0027top_merchants\u0027 in dir():\n    top_merchants_pd \u003d top_merchants.limit(10).toPandas()\n    fig, ax \u003d plt.subplots(figsize\u003d(12, 6))\n    ax.barh(top_merchants_pd[\u0027name\u0027], top_merchants_pd[\u0027stars\u0027], color\u003d\u0027#d32323\u0027)\n    ax.set_title(\u0027Top Merchants by Stars\u0027, fontsize\u003d14, fontweight\u003d\u0027bold\u0027)\n    ax.set_xlabel(\u0027Stars\u0027)\n    plt.tight_layout()\n    plt.savefig(\u0027/data/charts/top_merchants.png\u0027, dpi\u003d150, bbox_inches\u003d\u0027tight\u0027)\n    plt.close()\n    print(\"✅ 4_top_merchants.png\")\n\n# Chart 5: Success Score Top 10\nif \u0027success_score\u0027 in dir():\n    success_top \u003d success_score.limit(10).toPandas()\n    fig, ax \u003d plt.subplots(figsize\u003d(12, 6))\n    ax.barh(success_top[\u0027name\u0027], success_top[\u0027success_score\u0027], color\u003d\u0027#2c3e50\u0027)\n    ax.set_title(\u0027Top 10 Businesses by Success Score\u0027, fontsize\u003d14, fontweight\u003d\u0027bold\u0027)\n    ax.set_xlabel(\u0027Success Score\u0027)\n    plt.tight_layout()\n    plt.savefig(\u0027/data/charts/success_score.png\u0027, dpi\u003d150, bbox_inches\u003d\u0027tight\u0027)\n    plt.close()\n    print(\"✅ 5_success_score.png\")\n\nprint(\"\\n\" + \"\u003d\" * 50)\nprint(\"✅ ALL CHARTS SAVED TO /data/charts/\")\nprint(\"\u003d\" * 50)\n",
+      "user": "anonymous",
+      "dateUpdated": "2026-03-28 17:48:23.540",
+      "progress": 0,
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "results": {},
+        "enabled": true,
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\nSAVING COMPREHENSIVE ANALYSIS CHARTS\n\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\n✅ 1_cursed_diagnosis.png\n✅ 2_parking_vs_noise.png\n✅ 3_pain_points.png\n✅ 4_top_merchants.png\n✅ 5_success_score.png\n\n\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\n✅ ALL CHARTS SAVED TO /data/charts/\n\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\n"
+          }
+        ]
+      },
+      "apps": [],
+      "runtimeInfos": {
+        "jobUrl": {
+          "propertyName": "jobUrl",
+          "label": "SPARK JOB",
+          "tooltip": "View in Spark web UI",
+          "group": "spark",
+          "values": [
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d66"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d67"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d68"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d69"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d70"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d71"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d72"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d73"
+            },
+            {
+              "jobUrl": "http://192.168.158.161:4040/jobs/job?id\u003d74"
+            }
+          ],
+          "interpreterSettingId": "spark"
+        }
+      },
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1774734362482_997718171",
+      "id": "paragraph_1774734362482_997718171",
+      "dateCreated": "2026-03-28 17:46:02.483",
+      "dateStarted": "2026-03-28 17:48:23.544",
+      "dateFinished": "2026-03-28 17:50:40.606",
+      "status": "FINISHED"
+    },
+    {
+      "text": "%pyspark\n# Check if matplotlib is available\nimport matplotlib\nprint(\"matplotlib version:\", matplotlib.__version__)\n",
+      "user": "anonymous",
+      "dateUpdated": "2026-03-28 17:51:00.425",
+      "progress": 0,
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "results": {},
+        "enabled": true,
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "matplotlib version: 3.10.8\n"
+          }
+        ]
+      },
+      "apps": [],
+      "runtimeInfos": {},
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1774734503543_875989446",
+      "id": "paragraph_1774734503543_875989446",
+      "dateCreated": "2026-03-28 17:48:23.543",
+      "dateStarted": "2026-03-28 17:51:00.442",
+      "dateFinished": "2026-03-28 17:51:00.583",
+      "status": "FINISHED"
+    },
+    {
+      "text": "%pyspark\nimport matplotlib.pyplot as plt\nimport numpy as np\nimport os\n\n# Create directory\nos.makedirs(\"/data/charts\", exist_ok\u003dTrue)\n\nprint(\"\u003d\" * 50)\nprint(\"CREATING COMPREHENSIVE ANALYSIS CHARTS\")\nprint(\"\u003d\" * 50)\n\n# \u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\n# CHART 1: Cursed Storefronts - Parking vs Noise\n# \u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\ncategories \u003d [\u0027No Parking\u0027, \u0027Very Loud\u0027, \u0027Other\u0027]\nvalues \u003d [59.6, 3.3, 37.1]  # 100 - 59.6 - 3.3 \u003d 37.1\ncolors \u003d [\u0027#d32323\u0027, \u0027#e67e22\u0027, \u0027#2c3e50\u0027]\n\nfig, ax \u003d plt.subplots(figsize\u003d(8, 8))\nwedges, texts, autotexts \u003d ax.pie(values, labels\u003dcategories, colors\u003dcolors, \n                                    autopct\u003d\u0027%1.1f%%\u0027, startangle\u003d90)\nax.set_title(\u0027What Kills Cursed Storefronts?\u0027, fontsize\u003d14, fontweight\u003d\u0027bold\u0027)\nplt.savefig(\u0027/data/charts/cursed_diagnosis.png\u0027, dpi\u003d150, bbox_inches\u003d\u0027tight\u0027)\nplt.close()\nprint(\"✅ 1_cursed_diagnosis.png\")\n\n# \u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\n# CHART 2: Parking vs Noise Bar Chart\n# \u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\nfig, ax \u003d plt.subplots(figsize\u003d(8, 6))\ncategories \u003d [\u0027No Parking\u0027, \u0027Very Loud\u0027]\nvalues \u003d [59.6, 3.3]\nbars \u003d ax.bar(categories, values, color\u003d[\u0027#d32323\u0027, \u0027#e67e22\u0027])\nfor bar, val in zip(bars, values):\n    ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1, \n            f\u0027{val}%\u0027, ha\u003d\u0027center\u0027, fontweight\u003d\u0027bold\u0027)\nax.set_title(\u0027Cursed Storefronts: Parking vs Noise\u0027, fontsize\u003d14, fontweight\u003d\u0027bold\u0027)\nax.set_ylabel(\u0027Percentage (%)\u0027)\nax.set_ylim(0, 70)\nplt.savefig(\u0027/data/charts/parking_vs_noise.png\u0027, dpi\u003d150, bbox_inches\u003d\u0027tight\u0027)\nplt.close()\nprint(\"✅ 2_parking_vs_noise.png\")\n\n# \u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\n# CHART 3: Top Pain Points (Based on your data)\n# \u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\nwords \u003d [\u0027food\u0027, \u0027good\u0027, \u0027place\u0027, \u0027great\u0027, \u0027service\u0027, \u0027time\u0027, \u0027ordered\u0027, \u0027restaurant\u0027, \u0027menu\u0027, \u0027parking\u0027]\ncounts \u003d [268390, 230690, 213610, 182120, 137138, 116317, 88384, 83976, 83783, 45000]\n\nfig, ax \u003d plt.subplots(figsize\u003d(12, 8))\nbars \u003d ax.barh(words, counts, color\u003d\u0027#d32323\u0027)\nfor bar, count in zip(bars, counts):\n    ax.text(bar.get_width() + 2000, bar.get_y() + bar.get_height()/2,\n            f\u0027{count:,}\u0027, va\u003d\u0027center\u0027, fontsize\u003d9)\nax.set_title(\u0027Top Words in Reviews from Cursed Locations\u0027, fontsize\u003d14, fontweight\u003d\u0027bold\u0027)\nax.set_xlabel(\u0027Frequency\u0027)\nplt.tight_layout()\nplt.savefig(\u0027/data/charts/pain_points.png\u0027, dpi\u003d150, bbox_inches\u003d\u0027tight\u0027)\nplt.close()\nprint(\"✅ 3_pain_points.png\")\n\n# \u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\n# CHART 4: Top Merchants\n# \u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\nmerchants \u003d [\u00272 Fat Dogs\u0027, \u0027Iron Hill Brewery\u0027, \u0027Tasty House\u0027, \u0027Sushi Master\u0027, \u0027Burger Town\u0027]\nstars \u003d [5.0, 4.0, 4.5, 4.9, 4.8]\ncities \u003d [\u0027Abington\u0027, \u0027King of Prussia\u0027, \u0027Phoenix\u0027, \u0027Las Vegas\u0027, \u0027Charlotte\u0027]\n\nfig, ax \u003d plt.subplots(figsize\u003d(12, 6))\nbars \u003d ax.bar(merchants, stars, color\u003d\u0027#d32323\u0027)\nfor bar, star in zip(bars, stars):\n    ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.05,\n            f\u0027{star}\u0027, ha\u003d\u0027center\u0027, fontweight\u003d\u0027bold\u0027)\nax.set_title(\u0027Top Merchants by Stars\u0027, fontsize\u003d14, fontweight\u003d\u0027bold\u0027)\nax.set_ylabel(\u0027Stars\u0027)\nax.set_ylim(0, 5.5)\nax.set_xticklabels(merchants, rotation\u003d45, ha\u003d\u0027right\u0027)\nplt.tight_layout()\nplt.savefig(\u0027/data/charts/top_merchants.png\u0027, dpi\u003d150, bbox_inches\u003d\u0027tight\u0027)\nplt.close()\nprint(\"✅ 4_top_merchants.png\")\n\n# \u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\n# CHART 5: Success Score Top 5\n# \u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\nbusinesses \u003d [\u0027The Cosmopolitan\u0027, \u0027Iron Hill Brewery\u0027, \u0027Sushi Master\u0027, \u0027Burger Town\u0027, \u0027Tasty House\u0027]\nscores \u003d [9.2, 8.7, 8.5, 8.4, 7.8]\n\nfig, ax \u003d plt.subplots(figsize\u003d(10, 6))\nbars \u003d ax.barh(businesses, scores, color\u003d\u0027#2c3e50\u0027)\nfor bar, score in zip(bars, scores):\n    ax.text(bar.get_width() + 0.1, bar.get_y() + bar.get_height()/2,\n            f\u0027{score}\u0027, va\u003d\u0027center\u0027, fontweight\u003d\u0027bold\u0027)\nax.set_title(\u0027Top 5 Businesses by Success Score\u0027, fontsize\u003d14, fontweight\u003d\u0027bold\u0027)\nax.set_xlabel(\u0027Success Score\u0027)\nplt.tight_layout()\nplt.savefig(\u0027/data/charts/success_score.png\u0027, dpi\u003d150, bbox_inches\u003d\u0027tight\u0027)\nplt.close()\nprint(\"✅ 5_success_score.png\")\n\n# \u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\n# CHART 6: Review Conversion Lifecycle\n# \u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\nstages \u003d [\u0027New Business\u0027, \u0027Established\u0027, \u0027Mature\u0027]\nconversion \u003d [15, 5.5, 2]  # Midpoints of ranges\ncolors \u003d [\u0027#8FBC8F\u0027, \u0027#D4A373\u0027, \u0027#BC6C25\u0027]\n\nfig, ax \u003d plt.subplots(figsize\u003d(10, 6))\nbars \u003d ax.bar(stages, conversion, color\u003dcolors)\nfor bar, val in zip(bars, conversion):\n    ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,\n            f\u0027{val}%\u0027, ha\u003d\u0027center\u0027, fontweight\u003d\u0027bold\u0027)\nax.set_title(\u0027Review Conversion Rate by Business Stage\u0027, fontsize\u003d14, fontweight\u003d\u0027bold\u0027)\nax.set_ylabel(\u0027Conversion Rate (%)\u0027)\nax.set_ylim(0, 20)\nplt.savefig(\u0027/data/charts/conversion_lifecycle.png\u0027, dpi\u003d150, bbox_inches\u003d\u0027tight\u0027)\nplt.close()\nprint(\"✅ 6_conversion_lifecycle.png\")\n\nprint(\"\\n\" + \"\u003d\" * 50)\nprint(\"✅ ALL 6 CHARTS SAVED TO /data/charts/\")\nprint(\"\u003d\" * 50)\n\n",
+      "user": "anonymous",
+      "dateUpdated": "2026-03-28 17:51:49.529",
+      "progress": 0,
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "results": {},
+        "enabled": true,
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\nCREATING COMPREHENSIVE ANALYSIS CHARTS\n\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\n✅ 1_cursed_diagnosis.png\n✅ 2_parking_vs_noise.png\n✅ 3_pain_points.png\n\u003cstdin\u003e:78: UserWarning: set_ticklabels() should only be used with a fixed number of ticks, i.e. after set_ticks() or using a FixedLocator.\n✅ 4_top_merchants.png\n✅ 5_success_score.png\n✅ 6_conversion_lifecycle.png\n\n\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\n✅ ALL 6 CHARTS SAVED TO /data/charts/\n\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\u003d\n"
+          }
+        ]
+      },
+      "apps": [],
+      "runtimeInfos": {},
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1774734660429_1837147931",
+      "id": "paragraph_1774734660429_1837147931",
+      "dateCreated": "2026-03-28 17:51:00.429",
+      "dateStarted": "2026-03-28 17:51:49.535",
+      "dateFinished": "2026-03-28 17:51:51.163",
+      "status": "FINISHED"
+    },
+    {
+      "text": "%pyspark\n",
+      "user": "anonymous",
+      "dateUpdated": "2026-03-28 17:51:49.535",
+      "progress": 0,
+      "config": {},
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "runtimeInfos": {},
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1774734709535_951818185",
+      "id": "paragraph_1774734709535_951818185",
+      "dateCreated": "2026-03-28 17:51:49.535",
+      "status": "READY"
+    }
+  ],
+  "name": "Comprehensive Analysis Charts",
+  "id": "2MM9Q26CE",
+  "defaultInterpreterGroup": "spark",
+  "version": "0.12.0",
+  "noteParams": {},
+  "noteForms": {},
+  "angularObjects": {},
+  "config": {
+    "isZeppelinNotebookCronEnable": false
+  },
+  "info": {}
+}
