@@ -1,4 +1,6 @@
 ---
+Author: FATIMA ZAZOUL Date: March 28, 2026
+Project: Yelp Big Data Analysis – Requirement 1
 
 # Open-World Data Safari
 
