@@ -203,12 +203,29 @@ plt.show()
 
 #--------------------------------------------------
 
-# Cell 6
+# Cell 6 - FIXED: Question 5 - Positive Words
 %pyspark
+from pyspark.sql.functions import *
+import matplotlib.pyplot as plt
+import pandas as pd
+
+# Define stopwords
+stopwords = ['the', 'and', 'for', 'this', 'that', 'with', 'from', 'have', 
+             'are', 'was', 'were', 'but', 'not', 'all', 'can', 'will', 
+             'just', 'you', 'your', 'our', 'their', 'very', 'get', 'got']
+
+# Neutral/common words to exclude
+neutral_words = ['they', 'had', 'there', 'out', 'when', 'would', 'like', 'here', 
+                 'place', 'food', 'get', 'got', 'can', 'will', 'just', 'very',
+                 'one', 'time', 'went', 'came', 'back', 'even', 'also', 'well']
+
+# Expanded stopwords including neutral words
+expanded_stopwords = stopwords + neutral_words
+
 positive_words = review_df_clean.filter(col("stars") > 3) \
   .select(explode(split(regexp_replace(lower(col("text")), '[^a-zA-Z\\s]', ''), '\\s+')).alias("word")) \
   .filter((col("word") != "") & (length(col("word")) > 2)) \
-  .filter(~col("word").isin(stopwords)) \
+  .filter(~col("word").isin(expanded_stopwords)) \
   .groupBy("word") \
   .count() \
   .orderBy(col("count").desc()) \
@@ -216,15 +233,15 @@ positive_words = review_df_clean.filter(col("stars") > 3) \
   .toPandas()
 
 print("="*60)
-print("QUESTION 5: Top 10 Words - Positive Reviews (Rating > 3)")
+print("QUESTION 5: Top 10 Positive Sentiment Words - Positive Reviews (Rating > 3)")
 print("="*60)
 print(positive_words.to_string(index=False))
 
 plt.figure(figsize=(10, 6))
 plt.barh(positive_words['word'][::-1], positive_words['count'][::-1], color='green', edgecolor='black')
 plt.xlabel('Frequency')
-plt.ylabel('Word')
-plt.title('QUESTION 5: Top 10 Words - Positive Reviews')
+plt.ylabel('Positive Sentiment Word')
+plt.title('QUESTION 5: Top 10 Positive Words in Reviews (Rating > 3)')
 
 biggest = positive_words['count'].max()
 for i, (word, count) in enumerate(zip(positive_words['word'][::-1], positive_words['count'][::-1])):
@@ -235,12 +252,23 @@ plt.show()
 
 #--------------------------------------------------
 
-# Cell 7
+# Cell 7 - FIXED: Question 6 - Negative Words
 %pyspark
+from pyspark.sql.functions import *
+import matplotlib.pyplot as plt
+import pandas as pd
+
+# Define negative sentiment words
+negative_sentiment_words = ['bad', 'terrible', 'awful', 'horrible', 'disappointing', 
+                            'worst', 'poor', 'rude', 'slow', 'cold', 'dirty', 
+                            'overpriced', 'expensive', 'small', 'long', 'wait', 
+                            'mistake', 'wrong', 'problem', 'unfriendly', 'disappointed',
+                            'horrendous', 'atrocious', 'mediocre', 'underwhelming',
+                            'subpar', 'disgusting', 'nasty', 'gross', 'burnt', 'bland']
+
 negative_words = review_df_clean.filter(col("stars") <= 3) \
   .select(explode(split(regexp_replace(lower(col("text")), '[^a-zA-Z\\s]', ''), '\\s+')).alias("word")) \
-  .filter((col("word") != "") & (length(col("word")) > 2)) \
-  .filter(~col("word").isin(stopwords)) \
+  .filter(col("word").isin(negative_sentiment_words)) \
   .groupBy("word") \
   .count() \
   .orderBy(col("count").desc()) \
@@ -248,15 +276,15 @@ negative_words = review_df_clean.filter(col("stars") <= 3) \
   .toPandas()
 
 print("="*60)
-print("QUESTION 6: Top 10 Words - Negative Reviews (Rating ≤ 3)")
+print("QUESTION 6: Top 10 Negative Sentiment Words - Negative Reviews (Rating ≤ 3)")
 print("="*60)
 print(negative_words.to_string(index=False))
 
 plt.figure(figsize=(10, 6))
 plt.barh(negative_words['word'][::-1], negative_words['count'][::-1], color='red', edgecolor='black')
 plt.xlabel('Frequency')
-plt.ylabel('Word')
-plt.title('QUESTION 6: Top 10 Words - Negative Reviews')
+plt.ylabel('Negative Sentiment Word')
+plt.title('QUESTION 6: Top 10 Negative Words in Reviews (Rating ≤ 3)')
 
 biggest = negative_words['count'].max()
 for i, (word, count) in enumerate(zip(negative_words['word'][::-1], negative_words['count'][::-1])):
@@ -406,32 +434,53 @@ plt.show()
 
 #--------------------------------------------------
 
-# Cell 10
+# Cell 10 - FIXED: Question 9 - Pain Point Bigrams
 %pyspark
 import matplotlib.pyplot as plt
 from pyspark.sql.functions import *
+from pyspark.sql.types import ArrayType, StringType
 import pandas as pd
 
 # Stopwords to filter out
-stopwords = ['the', 'and', 'for', 'this', 'that', 'with', 'from', 'have', 
-             'are', 'was', 'were', 'but', 'not', 'all', 'can', 'will', 
-             'just', 'you', 'your', 'our', 'their', 'very', 'get', 'got']
+stopwords_bigrams = ['the', 'and', 'for', 'this', 'that', 'with', 'from', 'have', 
+                     'are', 'was', 'were', 'but', 'not', 'all', 'can', 'will', 
+                     'just', 'you', 'your', 'our', 'their', 'very', 'get', 'got',
+                     'they', 'had', 'there', 'out', 'when', 'would', 'like', 'here', 
+                     'place', 'food', 'one', 'time', 'went', 'came', 'back', 'even', 
+                     'also', 'well', 'ive', 'been', 'could', 'give', 'has', 'last',
+                     'first', 'ever', 'night', 'star']
 
-# Function to extract bigrams (two-word phrases)
-def get_bigrams(text):
+# Function to extract pain point bigrams
+def get_pain_point_bigrams(text):
     if not text:
         return []
     words = text.lower().split()
-    words = [w for w in words if len(w) > 2 and w not in stopwords]
-    bigrams = [' '.join(words[i:i+2]) for i in range(len(words)-1)]
-    return bigrams[:10]
+    # Clean words: remove punctuation and keep only alphabetic characters
+    words = [''.join(c for c in w if c.isalpha()) for w in words]
+    # Filter out stopwords and short words
+    words = [w for w in words if len(w) > 2 and w not in stopwords_bigrams]
+    
+    # Create bigrams
+    bigrams = []
+    for i in range(len(words)-1):
+        bigram = f"{words[i]} {words[i+1]}"
+        # Only include bigrams that might indicate pain points
+        pain_indicators = ['cold', 'rude', 'slow', 'bad', 'terrible', 'awful', 
+                          'horrible', 'disappointing', 'worst', 'poor', 'wrong',
+                          'overpriced', 'dirty', 'small', 'long', 'wait', 'service',
+                          'manager', 'staff', 'order', 'mistake', 'problem']
+        
+        if any(indicator in bigram for indicator in pain_indicators):
+            bigrams.append(bigram)
+    
+    return bigrams[:20]
 
-from pyspark.sql.types import ArrayType, StringType
-bigram_udf = udf(get_bigrams, ArrayType(StringType()))
+# Register UDF
+pain_bigram_udf = udf(get_pain_point_bigrams, ArrayType(StringType()))
 
 # Extract bigrams from 1-2 star reviews
 top_bigrams = review_df_clean.filter(col("stars") <= 2) \
-  .select(explode(bigram_udf(col("text"))).alias("bigram")) \
+  .select(explode(pain_bigram_udf(col("text"))).alias("bigram")) \
   .groupBy("bigram") \
   .count() \
   .orderBy(col("count").desc()) \
@@ -439,7 +488,7 @@ top_bigrams = review_df_clean.filter(col("stars") <= 2) \
   .toPandas()
 
 print("="*60)
-print("QUESTION 9: Top 15 Bigrams for 1-2 Star Reviews (Pain Points)")
+print("QUESTION 9: Top 15 Pain Point Bigrams for 1-2 Star Reviews")
 print("="*60)
 print(top_bigrams.to_string(index=False))
 
@@ -449,7 +498,7 @@ if len(top_bigrams) > 0:
     plt.barh(top_bigrams['bigram'][::-1], top_bigrams['count'][::-1], 
              color='orange', edgecolor='black', alpha=0.8)
     plt.xlabel('Frequency')
-    plt.ylabel('Bigram (Two-Word Phrase)')
+    plt.ylabel('Pain Point Bigrams')
     plt.title('QUESTION 9: Top 15 Pain Points in 1-2 Star Reviews')
     
     biggest = top_bigrams['count'].max()
@@ -459,7 +508,7 @@ if len(top_bigrams) > 0:
     plt.tight_layout()
     plt.show()
 else:
-    print("No bigrams found")
+    print("No pain point bigrams found")
 
 
 #--------------------------------------------------
@@ -683,6 +732,3 @@ if data:
     print("\n✅ QUESTION 12 COMPLETE!")
 else:
     print("No menu items found with mentions")
-
-#--------------------------------------------------
-
