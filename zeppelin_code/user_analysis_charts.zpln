@@ -1,0 +1,904 @@
+{
+  "paragraphs": [
+    {
+      "text": "%pyspark\nfrom pyspark.sql.functions import year\n\nuser_growth = spark.table(\"users\").groupBy(year(\"yelping_since\").alias(\"year\")).count().orderBy(\"year\")\nuser_growth.show()",
+      "user": "anonymous",
+      "dateUpdated": "2026-03-23 05:22:53.938",
+      "progress": 0,
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "results": {},
+        "enabled": true,
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "runtimeInfos": {
+        "jobUrl": {
+          "propertyName": "jobUrl",
+          "label": "SPARK JOB",
+          "tooltip": "View in Spark web UI",
+          "group": "spark",
+          "values": [
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=18"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=19"
+            }
+          ],
+          "interpreterSettingId": "spark"
+        }
+      },
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1774254136911_1507628352",
+      "id": "paragraph_1774254136911_1507628352",
+      "dateCreated": "2026-03-23 04:22:16.921",
+      "status": "READY"
+    },
+    {
+      "text": "%pyspark\nimport matplotlib.pyplot as plt\nfrom pyspark.sql.functions import year, when, count, col\nimport os\n\n# Create directory for charts\nos.makedirs(\"/data/charts\", exist_ok=True)\n\nprint(\"=\" * 50)\nprint(\"SAVING ALL CHARTS TO /data/charts/\")\nprint(\"=\" * 50)\n\n# ============================================\n# 1. User Growth Chart\n# ============================================\nprint(\"1. Saving User Growth...\")\nuser_growth = spark.table(\"users\").groupBy(year(\"yelping_since\").alias(\"year\")).count().orderBy(\"year\")\ndf = user_growth.toPandas()\n\nplt.figure(figsize=(14, 6))\nbars = plt.bar(df['year'], df['count'], color='#d32323', edgecolor='white')\nfor bar in bars:\n    height = bar.get_height()\n    plt.text(bar.get_x() + bar.get_width()/2., height,\n             f'{int(height):,}', ha='center', va='bottom', fontsize=8, rotation=45)\nplt.title('User Growth Over Time', fontsize=16, fontweight='bold')\nplt.xlabel('Year')\nplt.ylabel('New Users')\nplt.xticks(rotation=45)\nplt.grid(True, alpha=0.3, axis='y')\nplt.tight_layout()\nplt.savefig('/data/charts/user_growth.png', dpi=150, bbox_inches='tight')\nplt.close()\nprint(\"\u2713 Saved: /data/charts/user_growth.png\")\n\n# ============================================\n# 2. Top Reviewers\n# ============================================\nprint(\"2. Saving Top Reviewers...\")\ntop_reviewers = spark.table(\"users\").select(\"name\", \"review_count\").orderBy(\"review_count\", ascending=False).limit(15).toPandas()\n\nplt.figure(figsize=(10, 8))\ncolors = ['#d32323' if i == 0 else '#ff9999' for i in range(len(top_reviewers))]\nplt.barh(top_reviewers['name'], top_reviewers['review_count'], color=colors)\nplt.title('Top 15 Reviewers', fontsize=16, fontweight='bold')\nplt.xlabel('Review Count')\nplt.tight_layout()\nplt.savefig('/data/charts/top_reviewers.png', dpi=150, bbox_inches='tight')\nplt.close()\nprint(\"\u2713 Saved: /data/charts/top_reviewers.png\")\n\n# ============================================\n# 3. Most Popular Users\n# ============================================\nprint(\"3. Saving Most Popular Users...\")\npopular = spark.table(\"users\").select(\"name\", \"fans\").orderBy(\"fans\", ascending=False).limit(15).toPandas()\n\nplt.figure(figsize=(10, 8))\ncolors = ['#d32323' if i == 0 else '#ff9999' for i in range(len(popular))]\nplt.barh(popular['name'], popular['fans'], color=colors)\nplt.title('Top 15 Most Popular Users (by Fans)', fontsize=16, fontweight='bold')\nplt.xlabel('Number of Fans')\nplt.tight_layout()\nplt.savefig('/data/charts/most_popular.png', dpi=150, bbox_inches='tight')\nplt.close()\nprint(\"\u2713 Saved: /data/charts/most_popular.png\")\n\n# ============================================\n# 4. Elite Users Trend\n# ============================================\nprint(\"4. Saving Elite Users Trend...\")\nelite_trend = spark.table(\"users\").groupBy(year(\"yelping_since\").alias(\"year\")).agg(\n    count(\"*\").alias(\"total\"),\n    count(when(col(\"elite\") != \"\", 1)).alias(\"elite\")\n).withColumn(\"elite_pct\", (col(\"elite\") / col(\"total\") * 100)).orderBy(\"year\").toPandas()\n\nplt.figure(figsize=(12, 6))\nplt.plot(elite_trend['year'], elite_trend['elite_pct'], marker='o', color='#d32323', linewidth=2, markersize=8)\nplt.fill_between(elite_trend['year'], elite_trend['elite_pct'], alpha=0.3, color='#d32323')\nplt.title('Elite Users Percentage Trend', fontsize=16, fontweight='bold')\nplt.xlabel('Year')\nplt.ylabel('Elite Users (%)')\nplt.grid(True, alpha=0.3)\nplt.tight_layout()\nplt.savefig('/data/charts/elite_trend.png', dpi=150, bbox_inches='tight')\nplt.close()\nprint(\"\u2713 Saved: /data/charts/elite_trend.png\")\n\n# ============================================\n# 5. Rating Distribution\n# ============================================\nprint(\"5. Saving Rating Distribution...\")\nrating_dist = spark.table(\"review\").groupBy(\"stars\").count().orderBy(\"stars\").toPandas()\n\nplt.figure(figsize=(8, 8))\ncolors = ['#ff9999', '#ff6666', '#ff3333', '#cc0000', '#990000']\nplt.pie(rating_dist['count'], labels=rating_dist['stars'], autopct='%1.1f%%', \n        colors=colors, startangle=90, explode=[0.05]*5)\nplt.title('Rating Distribution', fontsize=16, fontweight='bold')\nplt.axis('equal')\nplt.tight_layout()\nplt.savefig('/data/charts/rating_distribution.png', dpi=150, bbox_inches='tight')\nplt.close()\nprint(\"\u2713 Saved: /data/charts/rating_distribution.png\")\n\n# ============================================\n# 6. Adventurous Eaters\n# ============================================\nprint(\"6. Saving Adventurous Eaters...\")\nadventurous = spark.sql(\"\"\"\nSELECT u.name, COUNT(DISTINCT cat.category) as cuisine_count\nFROM users u\nJOIN review r ON u.user_id = r.user_id\nJOIN business b ON r.business_id = b.business_id\nLATERAL VIEW EXPLODE(SPLIT(b.categories, ', ')) cat AS category\nWHERE cat.category IN ('American','Mexican','Italian','Japanese','Chinese','Thai','Mediterranean')\nGROUP BY u.name\nHAVING COUNT(r.review_id) >= 20\nORDER BY cuisine_count DESC\nLIMIT 20\n\"\"\").toPandas()\n\nplt.figure(figsize=(12, 10))\nplt.barh(adventurous['name'], adventurous['cuisine_count'], color='#d32323')\nplt.title('Top 20 Adventurous Eaters (by Cuisine Diversity)', fontsize=16, fontweight='bold')\nplt.xlabel('Number of Cuisines Tried')\nplt.ylabel('User Name')\nplt.tight_layout()\nplt.savefig('/data/charts/adventurous_eaters.png', dpi=150, bbox_inches='tight')\nplt.close()\nprint(\"\u2713 Saved: /data/charts/adventurous_eaters.png\")\n\nprint(\"\\n\" + \"=\" * 50)\nprint(\"\u2705 ALL CHARTS SAVED TO /data/charts/\")\nprint(\"=\" * 50)",
+      "user": "anonymous",
+      "dateUpdated": "2026-03-23 05:29:10.833",
+      "progress": 0,
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "results": {},
+        "enabled": true,
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "runtimeInfos": {
+        "jobUrl": {
+          "propertyName": "jobUrl",
+          "label": "SPARK JOB",
+          "tooltip": "View in Spark web UI",
+          "group": "spark",
+          "values": [
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=25"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=26"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=27"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=28"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=29"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=30"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=31"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=32"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=33"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=34"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=35"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=36"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=37"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=38"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=39"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=40"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=41"
+            }
+          ],
+          "interpreterSettingId": "spark"
+        }
+      },
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1774258135353_526218596",
+      "id": "paragraph_1774258135353_526218596",
+      "dateCreated": "2026-03-23 05:28:55.357",
+      "status": "READY"
+    },
+    {
+      "text": "%pyspark\nimport matplotlib.pyplot as plt\n\nrating_dist = spark.table(\"review\").groupBy(\"stars\").count().orderBy(\"stars\").toPandas()\n\nplt.figure(figsize=(8, 8))\ncolors = ['#ff9999', '#ff6666', '#ff3333', '#cc0000', '#990000']\nplt.pie(rating_dist['count'], labels=rating_dist['stars'], autopct='%1.1f%%', \n        colors=colors, startangle=90, explode=[0.05]*5)\nplt.title('Rating Distribution', fontsize=16, fontweight='bold')\nplt.axis('equal')\nplt.show()",
+      "user": "anonymous",
+      "dateUpdated": "2026-03-23 05:24:02.100",
+      "progress": 0,
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "results": {},
+        "enabled": true,
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "runtimeInfos": {
+        "jobUrl": {
+          "propertyName": "jobUrl",
+          "label": "SPARK JOB",
+          "tooltip": "View in Spark web UI",
+          "group": "spark",
+          "values": [
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=20"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=21"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=22"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=23"
+            }
+          ],
+          "interpreterSettingId": "spark"
+        }
+      },
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1774257811056_271110383",
+      "id": "paragraph_1774257811056_271110383",
+      "dateCreated": "2026-03-23 05:23:31.057",
+      "status": "READY"
+    },
+    {
+      "text": "%pyspark\nimport sys\nprint(sys.executable)\nimport matplotlib.pyplot as plt\nprint(\"Success!\")\n",
+      "user": "anonymous",
+      "dateUpdated": "2026-03-23 05:21:41.590",
+      "progress": 0,
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "results": {},
+        "enabled": true,
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "runtimeInfos": {},
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1774255953575_1863019141",
+      "id": "paragraph_1774255953575_1863019141",
+      "dateCreated": "2026-03-23 04:52:33.578",
+      "status": "READY"
+    },
+    {
+      "text": "%pyspark\nimport sys\nprint(\"Python path:\", sys.executable)\nimport matplotlib.pyplot as plt\nprint(\"matplotlib loaded!\")",
+      "user": "anonymous",
+      "dateUpdated": "2026-03-23 05:21:35.454",
+      "progress": 0,
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "results": {},
+        "enabled": true,
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "runtimeInfos": {},
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1774255711439_229969217",
+      "id": "paragraph_1774255711439_229969217",
+      "dateCreated": "2026-03-23 04:48:31.439",
+      "status": "READY"
+    },
+    {
+      "text": "%pyspark\n\nfrom pyspark.sql.functions import year\n\n# User Growth by Year\nuser_growth = spark.table(\"users\").groupBy(year(\"yelping_since\").alias(\"year\")).count().orderBy(\"year\")\nuser_growth.show()",
+      "user": "anonymous",
+      "dateUpdated": "2026-03-23 04:34:09.065",
+      "progress": 0,
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "results": {},
+        "enabled": true,
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "runtimeInfos": {
+        "jobUrl": {
+          "propertyName": "jobUrl",
+          "label": "SPARK JOB",
+          "tooltip": "View in Spark web UI",
+          "group": "spark",
+          "values": [
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=0"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=1"
+            }
+          ],
+          "interpreterSettingId": "spark"
+        }
+      },
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1774254832708_956386925",
+      "id": "paragraph_1774254832708_956386925",
+      "dateCreated": "2026-03-23 04:33:52.713",
+      "status": "READY"
+    },
+    {
+      "text": "%pyspark\nimport matplotlib.pyplot as plt\n\npopular = spark.table(\"users\").select(\"name\", \"fans\").orderBy(\"fans\", ascending=False).limit(15).toPandas()\n\nplt.figure(figsize=(10, 8))\ncolors = ['#d32323' if i == 0 else '#ff9999' for i in range(len(popular))]\nplt.barh(popular['name'], popular['fans'], color=colors)\nplt.title('Top 15 Most Popular Users (by Fans)', fontsize=16, fontweight='bold')\nplt.xlabel('Number of Fans', fontsize=12)\nplt.ylabel('User Name', fontsize=12)\nplt.tight_layout()\nplt.show()",
+      "user": "anonymous",
+      "dateUpdated": "2026-03-23 05:25:40.872",
+      "progress": 0,
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "results": {},
+        "enabled": true,
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "runtimeInfos": {
+        "jobUrl": {
+          "propertyName": "jobUrl",
+          "label": "SPARK JOB",
+          "tooltip": "View in Spark web UI",
+          "group": "spark",
+          "values": [
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=24"
+            }
+          ],
+          "interpreterSettingId": "spark"
+        }
+      },
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1774257935160_968825076",
+      "id": "paragraph_1774257935160_968825076",
+      "dateCreated": "2026-03-23 05:25:35.160",
+      "status": "READY"
+    },
+    {
+      "text": "%pyspark\nspark.sql(\"SHOW TABLES\").show()\n",
+      "user": "anonymous",
+      "dateUpdated": "2026-03-23 04:37:25.089",
+      "progress": 0,
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "results": {},
+        "enabled": true,
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "runtimeInfos": {},
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1774255028772_287683318",
+      "id": "paragraph_1774255028772_287683318",
+      "dateCreated": "2026-03-23 04:37:08.772",
+      "status": "READY"
+    },
+    {
+      "text": "%pyspark\nfrom pyspark.sql.functions import year\n\n# User Growth by Year\nuser_growth = spark.table(\"users\").groupBy(year(\"yelping_since\").alias(\"year\")).count().orderBy(\"year\")\nuser_growth.show()",
+      "user": "anonymous",
+      "dateUpdated": "2026-03-23 04:37:56.691",
+      "progress": 0,
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "results": {},
+        "enabled": true,
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "runtimeInfos": {
+        "jobUrl": {
+          "propertyName": "jobUrl",
+          "label": "SPARK JOB",
+          "tooltip": "View in Spark web UI",
+          "group": "spark",
+          "values": [
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=2"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=3"
+            }
+          ],
+          "interpreterSettingId": "spark"
+        }
+      },
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1774255069680_41291628",
+      "id": "paragraph_1774255069680_41291628",
+      "dateCreated": "2026-03-23 04:37:49.681",
+      "status": "READY"
+    },
+    {
+      "text": "%pyspark\nimport matplotlib.pyplot as plt\nprint(\"matplotlib loaded successfully!\")\n",
+      "user": "anonymous",
+      "dateUpdated": "2026-03-23 05:21:24.959",
+      "progress": 0,
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "results": {},
+        "enabled": true,
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "runtimeInfos": {},
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1774255537667_1100796948",
+      "id": "paragraph_1774255537667_1100796948",
+      "dateCreated": "2026-03-23 04:45:37.668",
+      "status": "READY"
+    },
+    {
+      "text": "%pyspark\nimport sys\nprint(\"Python:\", sys.executable)\nimport matplotlib.pyplot as plt\nprint(\"Success!\")\n",
+      "user": "anonymous",
+      "dateUpdated": "2026-03-23 04:56:41.932",
+      "progress": 0,
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "results": {},
+        "enabled": true,
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "runtimeInfos": {},
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1774256192209_1100566590",
+      "id": "paragraph_1774256192209_1100566590",
+      "dateCreated": "2026-03-23 04:56:32.210",
+      "status": "READY"
+    },
+    {
+      "text": "%pyspark\nfrom pyspark.sql.functions import year\nimport matplotlib.pyplot as plt\n\n# Get data\nuser_growth = spark.table(\"users\").groupBy(year(\"yelping_since\").alias(\"year\")).count().orderBy(\"year\")\ndf = user_growth.toPandas()\n\n# Create chart\nplt.figure(figsize=(10, 6))\nplt.plot(df['year'], df['count'], marker='o', color='#d32323', linewidth=2)\nplt.title('User Growth Over Time', fontsize=14)\nplt.xlabel('Year')\nplt.ylabel('New Users')\nplt.grid(True, alpha=0.3)\nplt.show()",
+      "user": "anonymous",
+      "dateUpdated": "2026-03-23 05:01:08.182",
+      "progress": 0,
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "results": {},
+        "enabled": true,
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "runtimeInfos": {
+        "jobUrl": {
+          "propertyName": "jobUrl",
+          "label": "SPARK JOB",
+          "tooltip": "View in Spark web UI",
+          "group": "spark",
+          "values": [
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=0"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=1"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=2"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=3"
+            }
+          ],
+          "interpreterSettingId": "spark"
+        }
+      },
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1774256308406_1023942138",
+      "id": "paragraph_1774256308406_1023942138",
+      "dateCreated": "2026-03-23 04:58:28.406",
+      "status": "READY"
+    },
+    {
+      "text": "%pyspark\nimport matplotlib.pyplot as plt\n\ntop_reviewers = spark.table(\"users\").select(\"name\", \"review_count\").orderBy(\"review_count\", ascending=False).limit(10).toPandas()\n\nplt.figure(figsize=(10, 6))\nplt.barh(top_reviewers['name'], top_reviewers['review_count'], color='#d32323')\nplt.title('Top 10 Reviewers', fontsize=14)\nplt.xlabel('Review Count')\nplt.tight_layout()\nplt.show()\n",
+      "user": "anonymous",
+      "dateUpdated": "2026-03-23 05:02:24.861",
+      "progress": 0,
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "results": {},
+        "enabled": true,
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "runtimeInfos": {
+        "jobUrl": {
+          "propertyName": "jobUrl",
+          "label": "SPARK JOB",
+          "tooltip": "View in Spark web UI",
+          "group": "spark",
+          "values": [
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=4"
+            }
+          ],
+          "interpreterSettingId": "spark"
+        }
+      },
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1774256538874_1432414679",
+      "id": "paragraph_1774256538874_1432414679",
+      "dateCreated": "2026-03-23 05:02:18.875",
+      "status": "READY"
+    },
+    {
+      "text": "%pyspark\nfrom pyspark.sql.functions import year, when, count, col\n\nelite_trend = spark.table(\"users\").groupBy(year(\"yelping_since\").alias(\"year\")).agg(\n    count(\"*\").alias(\"total\"),\n    count(when(col(\"elite\") != \"\", 1)).alias(\"elite\")\n).withColumn(\"elite_pct\", (col(\"elite\") / col(\"total\") * 100)).orderBy(\"year\").toPandas()\n\nplt.figure(figsize=(10, 6))\nplt.plot(elite_trend['year'], elite_trend['elite_pct'], marker='o', color='#d32323', linewidth=2)\nplt.title('Elite Users Percentage Trend', fontsize=14)\nplt.xlabel('Year')\nplt.ylabel('Elite Users (%)')\nplt.grid(True, alpha=0.3)\nplt.show()\n",
+      "user": "anonymous",
+      "dateUpdated": "2026-03-23 05:03:21.953",
+      "progress": 0,
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "results": {},
+        "enabled": true,
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "runtimeInfos": {
+        "jobUrl": {
+          "propertyName": "jobUrl",
+          "label": "SPARK JOB",
+          "tooltip": "View in Spark web UI",
+          "group": "spark",
+          "values": [
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=6"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=7"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=8"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=9"
+            }
+          ],
+          "interpreterSettingId": "spark"
+        }
+      },
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1774256583494_289482419",
+      "id": "paragraph_1774256583494_289482419",
+      "dateCreated": "2026-03-23 05:03:03.495",
+      "status": "READY"
+    },
+    {
+      "text": "%pyspark\npopular = spark.table(\"users\").select(\"name\", \"fans\").orderBy(\"fans\", ascending=False).limit(10).toPandas()\n\nplt.figure(figsize=(10, 6))\nplt.barh(popular['name'], popular['fans'], color='#d32323')\nplt.title('Top 10 Most Popular Users (by Fans)', fontsize=14)\nplt.xlabel('Number of Fans')\nplt.tight_layout()\nplt.show()\n",
+      "user": "anonymous",
+      "dateUpdated": "2026-03-23 05:02:47.143",
+      "progress": 0,
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "results": {},
+        "enabled": true,
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "runtimeInfos": {
+        "jobUrl": {
+          "propertyName": "jobUrl",
+          "label": "SPARK JOB",
+          "tooltip": "View in Spark web UI",
+          "group": "spark",
+          "values": [
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=5"
+            }
+          ],
+          "interpreterSettingId": "spark"
+        }
+      },
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1774256554632_2009285680",
+      "id": "paragraph_1774256554632_2009285680",
+      "dateCreated": "2026-03-23 05:02:34.632",
+      "status": "READY"
+    },
+    {
+      "text": "%pyspark\nrating_dist = spark.table(\"review\").groupBy(\"stars\").count().orderBy(\"stars\").toPandas()\n\nplt.figure(figsize=(10, 6))\nplt.bar(rating_dist['stars'], rating_dist['count'], color='#d32323')\nplt.title('Rating Distribution', fontsize=14)\nplt.xlabel('Stars')\nplt.ylabel('Number of Reviews')\nplt.xticks([1,2,3,4,5])\nplt.grid(True, alpha=0.3, axis='y')\nplt.show()\n",
+      "user": "anonymous",
+      "dateUpdated": "2026-03-23 05:03:47.071",
+      "progress": 0,
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "results": {},
+        "enabled": true,
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "runtimeInfos": {
+        "jobUrl": {
+          "propertyName": "jobUrl",
+          "label": "SPARK JOB",
+          "tooltip": "View in Spark web UI",
+          "group": "spark",
+          "values": [
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=10"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=11"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=12"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=13"
+            }
+          ],
+          "interpreterSettingId": "spark"
+        }
+      },
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1774256614207_784145888",
+      "id": "paragraph_1774256614207_784145888",
+      "dateCreated": "2026-03-23 05:03:34.207",
+      "status": "READY"
+    },
+    {
+      "text": "%pyspark\nimport matplotlib.pyplot as plt\n\nadventurous = spark.sql(\"\"\"\nSELECT u.name, COUNT(DISTINCT cat.category) as cuisine_count\nFROM users u\nJOIN review r ON u.user_id = r.user_id\nJOIN business b ON r.business_id = b.business_id\nLATERAL VIEW EXPLODE(SPLIT(b.categories, ', ')) cat AS category\nWHERE cat.category IN ('American','Mexican','Italian','Japanese','Chinese','Thai','Mediterranean')\nGROUP BY u.name\nHAVING COUNT(r.review_id) >= 20\nORDER BY cuisine_count DESC\nLIMIT 20\n\"\"\").toPandas()\n\nplt.figure(figsize=(12, 8))\nplt.barh(adventurous['name'], adventurous['cuisine_count'], color='#d32323')\nplt.title('Top 20 Adventurous Eaters (by Cuisine Diversity)', fontsize=14)\nplt.xlabel('Number of Cuisines Tried')\nplt.tight_layout()\nplt.show()",
+      "user": "anonymous",
+      "dateUpdated": "2026-03-23 05:15:06.235",
+      "progress": 0,
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "results": {},
+        "enabled": true,
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "runtimeInfos": {
+        "jobUrl": {
+          "propertyName": "jobUrl",
+          "label": "SPARK JOB",
+          "tooltip": "View in Spark web UI",
+          "group": "spark",
+          "values": [
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=6"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=7"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=8"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=9"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=10"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=11"
+            }
+          ],
+          "interpreterSettingId": "spark"
+        }
+      },
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1774256638052_648258338",
+      "id": "paragraph_1774256638052_648258338",
+      "dateCreated": "2026-03-23 05:03:58.053",
+      "status": "READY"
+    },
+    {
+      "text": "%pyspark\nfrom pyspark.sql.functions import year\n\nuser_growth = spark.table(\"users\").groupBy(year(\"yelping_since\").alias(\"year\")).count().orderBy(\"year\")\nuser_growth.show()",
+      "user": "anonymous",
+      "dateUpdated": "2026-03-23 05:20:06.239",
+      "progress": 0,
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "results": {},
+        "enabled": true,
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "runtimeInfos": {
+        "jobUrl": {
+          "propertyName": "jobUrl",
+          "label": "SPARK JOB",
+          "tooltip": "View in Spark web UI",
+          "group": "spark",
+          "values": [
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=12"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=13"
+            }
+          ],
+          "interpreterSettingId": "spark"
+        }
+      },
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1774254881636_1605742480",
+      "id": "paragraph_1774254881636_1605742480",
+      "dateCreated": "2026-03-23 04:34:41.636",
+      "status": "READY"
+    },
+    {
+      "text": "%pyspark\nimport matplotlib.pyplot as plt\n\ndf = user_growth.toPandas()\n\nplt.figure(figsize=(10, 6))\nplt.plot(df['year'], df['count'], marker='o', color='#d32323', linewidth=2)\nplt.title('User Growth Over Time', fontsize=14)\nplt.xlabel('Year')\nplt.ylabel('New Users')\nplt.grid(True, alpha=0.3)\nplt.show()",
+      "user": "anonymous",
+      "dateUpdated": "2026-03-23 05:20:35.142",
+      "progress": 0,
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "results": {},
+        "enabled": true,
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "runtimeInfos": {
+        "jobUrl": {
+          "propertyName": "jobUrl",
+          "label": "SPARK JOB",
+          "tooltip": "View in Spark web UI",
+          "group": "spark",
+          "values": [
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=14"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=15"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=16"
+            },
+            {
+              "jobUrl": "http://192.168.108.161:4040/jobs/job?id=17"
+            }
+          ],
+          "interpreterSettingId": "spark"
+        }
+      },
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1774257622742_1987352519",
+      "id": "paragraph_1774257622742_1987352519",
+      "dateCreated": "2026-03-23 05:20:22.743",
+      "status": "READY"
+    },
+    {
+      "text": "%pyspark\n",
+      "user": "anonymous",
+      "dateUpdated": "2026-03-23 05:20:21.298",
+      "progress": 0,
+      "config": {},
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "runtimeInfos": {},
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1774257621297_75070631",
+      "id": "paragraph_1774257621297_75070631",
+      "dateCreated": "2026-03-23 05:20:21.297",
+      "status": "READY"
+    },
+    {
+      "text": "%pyspark\n",
+      "user": "anonymous",
+      "dateUpdated": "2026-03-23 04:22:31.971",
+      "progress": 0,
+      "config": {},
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "runtimeInfos": {},
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1774254151970_335992214",
+      "id": "paragraph_1774254151970_335992214",
+      "dateCreated": "2026-03-23 04:22:31.970",
+      "status": "READY"
+    }
+  ],
+  "name": "Untitled Note 8",
+  "id": "2MQ8MRU4V",
+  "defaultInterpreterGroup": "spark",
+  "version": "0.12.0",
+  "noteParams": {},
+  "noteForms": {},
+  "angularObjects": {},
+  "config": {
+    "isZeppelinNotebookCronEnable": false
+  },
+  "info": {}
+}
